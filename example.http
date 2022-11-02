@@ -1,0 +1,21 @@
+# @name add foobar
+POST http://localhost:9090/foobar/add
+Content-Type: application/json
+X-Foobar-Meta: example
+
+{
+ "foo": 43,
+  "bar": {
+    "a": 3.14,
+    "b": "hello",
+    "c": true
+  }
+}
+
+###
+
+# @name get all foobars
+GET http://localhost:9090/foobar/
+Accept: application/json
+
+###
