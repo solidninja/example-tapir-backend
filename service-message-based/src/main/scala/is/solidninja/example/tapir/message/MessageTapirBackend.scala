@@ -47,9 +47,7 @@ class MessageResponseListener[R] extends BodyListener[RIO[R, *], MessageResponse
 
 class MessageRequestBody[R]() extends RequestBody[RIO[R, *], NoStreams] {
   override val streams: capabilities.Streams[NoStreams] = NoStreams
-  override def toStream(serverRequest: ServerRequest): streams.BinaryStream = throw new NotImplementedError(
-    "no streaming support"
-  )
+  override def toStream(serverRequest: ServerRequest): streams.BinaryStream = throw Unsupported.Streams
   override def toRaw[Req](serverRequest: ServerRequest, bodyType: RawBodyType[Req]): RIO[R, RawValue[Req]] = {
     val underlying = serverRequest.underlying.asInstanceOf[Message]
     bodyType match {
