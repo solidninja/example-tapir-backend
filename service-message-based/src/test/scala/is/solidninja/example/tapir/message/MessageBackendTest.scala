@@ -19,7 +19,7 @@ import java.util.UUID
   */
 @RunWith(classOf[zio.test.junit.ZTestJUnitRunner])
 class MessageBackendTest extends ZIOSpecDefault {
-  val backend = MessageTapirBackend[FooBarService.Environment, Nothing](FooBarServerEndpoints.all(), e => ZIO.die(e))
+  val backend = MessageTapirBackend[FooBarService.Environment](FooBarServerEndpoints.allRIO())
   override def spec = suite("foobar service endpoint")(
     test("GET /foo should list all foobars")(
       for {

@@ -6,8 +6,8 @@ import zio.stream.ZStream
 
 object FooBarServer extends ZIOAppDefault {
 
-  def server: MessageTapirBackend[FooBarService.Environment, Nothing] =
-    MessageTapirBackend[FooBarService.Environment, Nothing](FooBarServerEndpoints.all(), e => ZIO.die(e))
+  def server: MessageTapirBackend[FooBarService.Environment] =
+    MessageTapirBackend[FooBarService.Environment](FooBarServerEndpoints.allRIO())
 
   // admittedly not very useful, hook it up to a real message broker
   def messageLoop: ZStream[Any, Nothing, Message] = ZStream.never

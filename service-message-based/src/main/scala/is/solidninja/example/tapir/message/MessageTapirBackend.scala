@@ -1,6 +1,7 @@
 package is.solidninja.example.tapir.message
 
 import sttp.capabilities
+import sttp.client3.impl.zio.RIOMonadAsyncError
 import sttp.model.{HasHeaders, Header, Method, QueryParams, Uri}
 import sttp.tapir.capabilities.NoStreams
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
@@ -39,17 +40,17 @@ case class MessageServerRequest(message: Message, attributes: AttributeMap = Att
   override def headers: Seq[Header] = message.headers.map((Header.apply _).tupled).toSeq
 }
 
-class MessageResponseListener[R, E] extends BodyListener[ZIO[R, E, *], MessageResponse] {
-  override def onComplete(body: MessageResponse)(cb: Try[Unit] => ZIO[R, E, Unit]): ZIO[R, E, MessageResponse] =
+class MessageResponseListener[R] extends BodyListener[RIO[R, *], MessageResponse] {
+  override def onComplete(body: MessageResponse)(cb: Try[Unit] => RIO[R, Unit]): RIO[R, MessageResponse] =
     cb(Success(())).as(body)
 }
 
-class MessageRequestBody[R, E]() extends RequestBody[ZIO[R, E, *], NoStreams] {
+class MessageRequestBody[R]() extends RequestBody[RIO[R, *], NoStreams] {
   override val streams: capabilities.Streams[NoStreams] = NoStreams
   override def toStream(serverRequest: ServerRequest): streams.BinaryStream = throw new NotImplementedError(
     "no streaming support"
   )
-  override def toRaw[Req](serverRequest: ServerRequest, bodyType: RawBodyType[Req]): ZIO[R, E, RawValue[Req]] = {
+  override def toRaw[Req](serverRequest: ServerRequest, bodyType: RawBodyType[Req]): RIO[R, RawValue[Req]] = {
     val underlying = serverRequest.underlying.asInstanceOf[Message]
     bodyType match {
       case RawBodyType.StringBody(charset) => ZIO.succeed(new String(underlying.body, charset)).map(RawValue(_))
@@ -96,15 +97,14 @@ class MessageResponseBody() extends ToResponseBody[MessageResponse, NoStreams] {
   ): MessageResponse = throw Unsupported.Streams
 }
 
-final case class MessageTapirBackend[R, E](
-    endpoints: List[ServerEndpoint[Any, ZIO[R, E, *]]],
-    convertError: Throwable => IO[E, Nothing]
+final case class MessageTapirBackend[R](
+    endpoints: List[ServerEndpoint[Any, RIO[R, *]]]
 ) {
 
-  private[this] implicit val monad: ZIOMonadAsyncError[R, E] = new ZIOMonadAsyncError(convertError)
-  private[this] implicit val bodyListener: BodyListener[ZIO[R, E, *], MessageResponse] = new MessageResponseListener
+  private[this] implicit val monad: RIOMonadAsyncError[R] = new RIOMonadAsyncError[R]()
+  private[this] implicit val bodyListener: BodyListener[RIO[R, *], MessageResponse] = new MessageResponseListener
 
-  private val interp = new ServerInterpreter[Any, ZIO[R, E, *], MessageResponse, NoStreams](
+  private val interp = new ServerInterpreter[Any, RIO[R, *], MessageResponse, NoStreams](
     serverEndpoints = FilterServerEndpoints(endpoints),
     requestBody = new MessageRequestBody,
     toResponseBody = new MessageResponseBody,
@@ -112,7 +112,7 @@ final case class MessageTapirBackend[R, E](
     deleteFile = _ => ZIO.die(Unsupported.Files)
   )
 
-  def handle(in: Message): ZIO[R, E, RequestResult[MessageResponse]] =
+  def handle(in: Message): RIO[R, RequestResult[MessageResponse]] =
     interp.apply(MessageServerRequest(in))
 
 }
