@@ -5,4 +5,5 @@ sources:
   - https://git.sr.ht/~vladimir-lu/example-tapir-backend
 tasks:
   - build: |
+      cd example-tapir-backend
       sbt test
